@@ -1,0 +1,58 @@
+services:
+  # 1. MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: cantaflow-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - cantaflow-network
+
+  # 2. Node.js Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cantaflow-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/cantaflow
+      - JWT_SECRET=cantaflow_pixellab_secret_jwt_key_2026_production
+      - NODE_ENV=production
+      - CLIENT_URL=http://localhost:3000
+    volumes:
+      - audio_uploads:/app/uploads/audio
+    depends_on:
+      - mongodb
+    networks:
+      - cantaflow-network
+
+  # 3. Frontend React Web App (PixelLab)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cantaflow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - cantaflow-network
+
+volumes:
+  mongo_data:
+  audio_uploads:
+
+networks:
+  cantaflow-network:
+    driver: bridge
